@@ -4,6 +4,7 @@ import json
 import urllib
 import time
 from datetime import datetime
+import configparser
 
 # APIs used:
 # https://api.sunrise-sunset.org
@@ -12,13 +13,10 @@ from datetime import datetime
 # ToDo:
 # - Check whether it is dark outside.
 
-# Google API key
-# Keep in mind you are limited in the number of Google API calls you can do each month.
-GoogleAPIKey = "Fill in your Google API key here"
-
-# Discord webhook:
-webhook_url = "Fill in your Discor Webhook URL here"
-
+def loadConfig():
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    return config
 
 def reverseGeo(latitude, longitude):
     geo_url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + latitude + "," + longitude + "&result_type=country&key=" + GoogleAPIKey
@@ -61,6 +59,13 @@ for i in range(2, 20, 2):
     timestamp = timestamp + "," + str(new_time)
 
 print (timestamp)
+config = loadConfig()
+GoogleAPIKey = config['API_Settings']['GoogleAPIKey']
+webhook_url = config['Discord_Settings']['webhook_url']
+lat_min = int(config['Map_Settings']['lat_min'])
+lat_max = int(config['Map_Settings']['lat_max'])
+long_min = int(config['Map_Settings']['long_min'])
+long_max = int(config['Map_Settings']['long_max'])
 
 future_url = "https://api.wheretheiss.at/v1/satellites/25544/positions?timestamps=" + timestamp + "&units=km"
 future_request = requests.get(future_url)
@@ -81,7 +86,7 @@ for entry in future_json:
     # This is to limit the calls to Google's geo location API to a managable number, to prevent paying for the service.
     # If the visibility of the ISS is eclipsed it will not be visible. That's another reason not to call for the location as it's useless anyway.
     #getSunDown(minute,latitude,longitude)
-    if ( (35 < latitude < 56) and ( -10 < longitude < 30 ) and visibility != "eclipsed"):
+    if ( (lat_min < latitude < lat_max) and ( long_min < longitude < long_max ) and visibility != "eclipsed"):
         country = reverseGeo(str(entry['latitude']), str(entry['longitude']))
         print("ISS is above Europe")
         if (country != "Ocean" and country != previousCountry):
